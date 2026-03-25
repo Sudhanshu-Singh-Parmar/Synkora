@@ -63,8 +63,38 @@ const starterUsers = [
     password: "pass1234",
     city: "Delhi",
     wallet: 10,
-    skillsOffered: ["JavaScript", "React"],
-    skillsWanted: ["Public Speaking", "Spanish"],
+    skillsOffered: ["Coding", "JavaScript", "React"],
+    skillsWanted: ["Guitar", "Music Theory"],
+  },
+  {
+    id: "starter-mira",
+    name: "Mira Khanna",
+    email: "mira@knit.local",
+    password: "pass1234",
+    city: "Delhi",
+    wallet: 8,
+    skillsOffered: ["Guitar", "Music Theory", "Live Performance"],
+    skillsWanted: ["Coding", "React"],
+  },
+  {
+    id: "starter-kabir",
+    name: "Kabir Singh",
+    email: "kabir@knit.local",
+    password: "pass1234",
+    city: "Noida",
+    wallet: 9,
+    skillsOffered: ["Photography", "Video Editing"],
+    skillsWanted: ["UI Design", "Coding"],
+  },
+  {
+    id: "starter-neha",
+    name: "Neha Verma",
+    email: "neha@knit.local",
+    password: "pass1234",
+    city: "Delhi",
+    wallet: 7,
+    skillsOffered: ["Spoken English", "Public Speaking"],
+    skillsWanted: ["Guitar", "Branding"],
   },
 ];
 
@@ -197,6 +227,7 @@ export function AppProvider({ children }) {
       featuredSkills,
       nearbyMembers,
       platformStats,
+      users,
       profile,
       wallet,
       isAuthenticated,
@@ -211,7 +242,7 @@ export function AppProvider({ children }) {
       verifyTwoFactorCode,
       logout,
     }),
-    [authError, authMode, currentUser, isAuthenticated, pendingVerification, profile, wallet]
+    [authError, authMode, currentUser, isAuthenticated, pendingVerification, profile, users, wallet]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
