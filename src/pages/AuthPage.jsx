@@ -1,14 +1,6 @@
-import { Navigate } from "react-router-dom";
 import AuthPanel from "../components/AuthPanel";
-import { useAppContext } from "../context/AppContext";
 
 export default function AuthPage() {
-  const { isAuthenticated } = useAppContext();
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
     <div className="mx-auto max-w-4xl px-6 py-16 lg:px-8">
       <div className="mx-auto max-w-2xl text-center">

@@ -119,6 +119,24 @@ function writeStorage(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+function normalizeSkillList(skills) {
+  const seen = new Set();
+
+  return skills
+    .map((skill) => skill.trim())
+    .filter(Boolean)
+    .filter((skill) => {
+      const key = skill.toLowerCase();
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+}
+
 export function AppProvider({ children }) {
   const [users, setUsers] = useState(() => {
     const storedUsers = readStorage(STORAGE_KEYS.users, null);
@@ -155,7 +173,47 @@ export function AppProvider({ children }) {
   };
 
   const registerUser = ({ name, email, password, city, skillsOffered, skillsWanted }) => {
+    const trimmedName = name.trim();
     const normalizedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    const trimmedCity = city.trim();
+    const normalizedOfferedSkills = normalizeSkillList(skillsOffered);
+    const normalizedWantedSkills = normalizeSkillList(skillsWanted);
+
+    if (!trimmedName) {
+      setAuthError("Please enter your name.");
+      return false;
+    }
+
+    if (!normalizedEmail) {
+      setAuthError("Please enter your email.");
+      return false;
+    }
+
+    if (!trimmedPassword) {
+      setAuthError("Please enter a password.");
+      return false;
+    }
+
+    if (trimmedPassword.length < 6) {
+      setAuthError("Password must be at least 6 characters.");
+      return false;
+    }
+
+    if (!trimmedCity) {
+      setAuthError("Please enter your city.");
+      return false;
+    }
+
+    if (!normalizedOfferedSkills.length) {
+      setAuthError("Add at least one skill you can teach.");
+      return false;
+    }
+
+    if (!normalizedWantedSkills.length) {
+      setAuthError("Add at least one skill you want to learn.");
+      return false;
+    }
 
     if (users.some((user) => user.email === normalizedEmail)) {
       setAuthError("This email is already registered.");
@@ -164,13 +222,13 @@ export function AppProvider({ children }) {
 
     const newUser = {
       id: `user-${Date.now()}`,
-      name: name.trim(),
+      name: trimmedName,
       email: normalizedEmail,
-      password,
-      city: city.trim() || "Your city",
+      password: trimmedPassword,
+      city: trimmedCity,
       wallet: 6,
-      skillsOffered: skillsOffered.length ? skillsOffered : ["General Mentoring"],
-      skillsWanted: skillsWanted.length ? skillsWanted : ["New Skills"],
+      skillsOffered: normalizedOfferedSkills,
+      skillsWanted: normalizedWantedSkills,
     };
 
     startVerification({ type: "register", user: newUser, email: newUser.email });
@@ -179,7 +237,19 @@ export function AppProvider({ children }) {
 
   const loginUser = ({ email, password }) => {
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = users.find((user) => user.email === normalizedEmail && user.password === password);
+    const trimmedPassword = password.trim();
+
+    if (!normalizedEmail) {
+      setAuthError("Please enter your email.");
+      return false;
+    }
+
+    if (!trimmedPassword) {
+      setAuthError("Please enter your password.");
+      return false;
+    }
+
+    const existingUser = users.find((user) => user.email === normalizedEmail && user.password === trimmedPassword);
 
     if (!existingUser) {
       setAuthError("Invalid email or password.");

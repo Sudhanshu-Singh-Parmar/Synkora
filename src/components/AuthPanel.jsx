@@ -91,6 +91,7 @@ export default function AuthPanel() {
   const [loginForm, setLoginForm] = useState(initialLoginState);
   const [verificationCode, setVerificationCode] = useState("");
   const requestedMode = searchParams.get("auth");
+  const panelTargetId = "auth-panel";
 
   useEffect(() => {
     if (requestedMode === "login" || requestedMode === "register") {
@@ -98,6 +99,20 @@ export default function AuthPanel() {
       clearAuthError();
     }
   }, [clearAuthError, requestedMode, setAuthMode]);
+
+  useEffect(() => {
+    setVerificationCode("");
+  }, [pendingVerification]);
+
+  useEffect(() => {
+    const panel = document.getElementById(panelTargetId);
+
+    if (!panel) {
+      return;
+    }
+
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [authMode, pendingVerification]);
 
   const updateRegisterField = (field, value) => {
     setRegisterForm((current) => ({ ...current, [field]: value }));
@@ -126,7 +141,14 @@ export default function AuthPanel() {
   const handleRegisterSubmit = (event) => {
     event.preventDefault();
     clearAuthError();
-    registerUser(registerForm);
+    const registered = registerUser(registerForm);
+
+    if (registered) {
+      setLoginForm({
+        email: registerForm.email.trim().toLowerCase(),
+        password: registerForm.password,
+      });
+    }
   };
 
   const handleLoginSubmit = (event) => {
@@ -141,14 +163,17 @@ export default function AuthPanel() {
     const verified = verifyTwoFactorCode(verificationCode.trim());
 
     if (verified) {
-      navigate("/");
+      setRegisterForm(initialRegisterState);
+      setLoginForm(initialLoginState);
+      setVerificationCode("");
+      navigate("/discover", { replace: true });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   if (isAuthenticated) {
     return (
-      <div className="rounded-[28px] border border-teal-300/20 bg-ink-900/85 p-6 shadow-glow">
+      <div id={panelTargetId} className="rounded-[28px] border border-teal-300/20 bg-ink-900/85 p-6 shadow-glow">
         <p className="text-sm uppercase tracking-[0.35em] text-teal-300">Logged in</p>
         <h3 className="mt-3 font-display text-3xl text-white">{currentUser.name}</h3>
         <p className="mt-3 text-sm leading-6 text-slate-300">
@@ -173,7 +198,10 @@ export default function AuthPanel() {
   }
 
   return (
-    <div id="auth-panel" className="rounded-[28px] border border-white/10 bg-ink-900/85 p-6 shadow-glow">
+    <div
+      id={panelTargetId}
+      className="min-h-[720px] rounded-[28px] border border-white/10 bg-ink-900/85 p-6 shadow-glow transition-all duration-300"
+    >
       <div className="flex gap-2 rounded-full border border-white/10 bg-white/5 p-1">
         {["register", "login"].map((mode) => (
           <button
@@ -183,6 +211,7 @@ export default function AuthPanel() {
               setSearchParams({ auth: mode });
               setAuthMode(mode);
               clearAuthError();
+              setVerificationCode("");
             }}
             className={`flex-1 rounded-full px-4 py-3 text-sm font-medium capitalize transition ${
               authMode === mode ? "bg-white text-ink-950" : "text-slate-300 hover:text-white"
@@ -199,7 +228,7 @@ export default function AuthPanel() {
             <p className="text-sm uppercase tracking-[0.35em] text-gold-300">2-step verification</p>
             <h3 className="mt-3 font-display text-3xl text-white">Verify your account</h3>
             <p className="mt-2 text-sm text-slate-400">
-              Demo mode: enter the code shown below. This verification step is also saved in local browser storage.
+              Enter the 6-digit verification code shown below to complete sign in securely in this prototype.
             </p>
           </div>
           <div className="rounded-[24px] border border-gold-300/20 bg-gold-400/10 p-4">
@@ -231,6 +260,7 @@ export default function AuthPanel() {
             value={registerForm.name}
             onChange={(event) => updateRegisterField("name", event.target.value)}
             placeholder="Full name"
+            autoComplete="name"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
           />
           <div className="grid gap-3 sm:grid-cols-2">
@@ -239,12 +269,14 @@ export default function AuthPanel() {
               onChange={(event) => updateRegisterField("email", event.target.value)}
               placeholder="Email"
               type="email"
+              autoComplete="email"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
             />
             <input
               value={registerForm.city}
               onChange={(event) => updateRegisterField("city", event.target.value)}
               placeholder="City"
+              autoComplete="address-level2"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
             />
           </div>
@@ -253,6 +285,7 @@ export default function AuthPanel() {
             onChange={(event) => updateRegisterField("password", event.target.value)}
             placeholder="Password"
             type="password"
+            autoComplete="new-password"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
           />
           <SkillInput
@@ -290,6 +323,7 @@ export default function AuthPanel() {
             onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
             placeholder="Email"
             type="email"
+            autoComplete="email"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
           />
           <input
@@ -297,11 +331,9 @@ export default function AuthPanel() {
             onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
             placeholder="Password"
             type="password"
+            autoComplete="current-password"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
           />
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            Demo login: aarav@knit.local with password pass1234
-          </div>
           {authError ? <p className="text-sm text-rose-300">{authError}</p> : null}
           <button
             type="submit"

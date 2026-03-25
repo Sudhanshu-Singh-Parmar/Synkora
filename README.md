@@ -1,2 +1,2 @@
-# SkillSwap
-SkillSwap – Bartering Platform for Learning
+# Synkora
+Synkora - Bartering Platform for Learning

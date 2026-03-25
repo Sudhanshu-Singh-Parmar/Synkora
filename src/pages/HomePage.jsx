@@ -59,7 +59,7 @@ export default function HomePage() {
               Swap knowledge locally. Learn without paying. Teach with impact.
             </h1>
             <p className="mt-6 max-w-2xl animate-rise text-lg leading-8 text-slate-300 opacity-0 [animation-delay:280ms]">
-              SwapMantra helps people learn from each other in their local area. You can find someone nearby, book a
+              Synkora helps people learn from each other in their local area. You can find someone nearby, book a
               session, and exchange skills using time credits instead of money.
             </p>
             <div className="mt-10 flex animate-rise flex-col gap-4 opacity-0 sm:flex-row [animation-delay:420ms]">
@@ -105,7 +105,7 @@ export default function HomePage() {
             <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,23,41,0.96),rgba(10,15,30,0.92))] p-8 shadow-glow backdrop-blur-xl">
               <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(45,212,191,0.06),transparent_35%,transparent_65%,rgba(251,113,133,0.06))]" />
               <div className="relative">
-                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">SwapMantra identity</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">Synkora identity</p>
                 <div className="mt-8 flex items-center gap-5">
                   <div className="relative flex h-24 w-24 items-center justify-center">
                     <span className="absolute h-24 w-24 animate-pulse rounded-[28px] border border-teal-300/25 bg-teal-400/10" />
@@ -115,7 +115,7 @@ export default function HomePage() {
                     <span className="font-display text-3xl font-semibold text-white">S</span>
                   </div>
                   <div>
-                    <h2 className="font-display text-5xl text-white">SwapMantra</h2>
+                    <h2 className="font-display text-5xl text-white">Synkora</h2>
                     <p className="mt-2 max-w-sm text-base leading-7 text-slate-300">
                       A clean, local-first skill swapping space designed for community, trust, and momentum.
                     </p>

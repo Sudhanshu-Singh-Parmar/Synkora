@@ -94,7 +94,7 @@ export default function AppShell() {
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-teal-300/25 bg-teal-400/10 text-teal-200 shadow-glow">
               <BrandIcon />
             </span>
-            <span>SwapMantra</span>
+            <span>Synkora</span>
           </NavLink>
 
           <nav className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1 md:flex">
@@ -220,7 +220,7 @@ export default function AppShell() {
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-300/25 bg-teal-400/10 text-teal-200">
                 <BrandIcon />
               </span>
-              <p className="font-display text-3xl text-white">SwapMantra</p>
+              <p className="font-display text-3xl text-white">Synkora</p>
             </div>
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-300">
               A local skill-sharing platform built to help people teach, learn, and grow together through time-based
@@ -228,7 +228,7 @@ export default function AppShell() {
             </p>
             <div className="mt-5 text-sm leading-7 text-slate-400">
               <p>Address: 221 Community Hub Road, Sector 18, New Delhi, India</p>
-              <p>Email: hello@swapmantra.in</p>
+              <p>Email: hello@synkora.in</p>
               <p>Phone: +91 730036 8554</p>
             </div>
           </div>
