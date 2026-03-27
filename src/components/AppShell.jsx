@@ -115,12 +115,6 @@ export default function AppShell() {
 
           {isAuthenticated ? (
             <div className="hidden items-center gap-3 md:flex">
-              <NavLink
-                to="/discover"
-                className="rounded-full border border-teal-300/40 bg-teal-400 px-4 py-2 text-sm font-medium text-ink-950 shadow-glow transition hover:bg-teal-300"
-              >
-                Start Swapping
-              </NavLink>
               <button
                 type="button"
                 onClick={logout}
@@ -180,21 +174,13 @@ export default function AppShell() {
                   </NavLink>
                 ))}
                 {isAuthenticated ? (
-                  <>
-                    <NavLink
-                      to="/discover"
-                      className="rounded-2xl bg-teal-400 px-4 py-3 text-sm font-medium text-ink-950 transition hover:bg-teal-300"
-                    >
-                      Start Swapping
-                    </NavLink>
-                    <button
-                      type="button"
-                      onClick={logout}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-white transition hover:bg-white/10"
-                    >
-                      Logout
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-white transition hover:bg-white/10"
+                  >
+                    Logout
+                  </button>
                 ) : (
                   <NavLink
                     to="/auth?auth=login"
