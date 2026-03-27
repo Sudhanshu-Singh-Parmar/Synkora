@@ -252,6 +252,49 @@ export function AppProvider({ children }) {
     return true;
   };
 
+  const updateProfile = ({ name, city, skillsOffered, skillsWanted }) => {
+    if (!currentUser) {
+      return { ok: false, message: "Please log in to update your profile." };
+    }
+
+    const trimmedName = name.trim();
+    const trimmedCity = city.trim();
+    const normalizedOfferedSkills = normalizeSkillList(skillsOffered);
+    const normalizedWantedSkills = normalizeSkillList(skillsWanted);
+
+    if (!trimmedName) {
+      return { ok: false, message: "Please enter your name." };
+    }
+
+    if (!trimmedCity) {
+      return { ok: false, message: "Please enter your city." };
+    }
+
+    if (!normalizedOfferedSkills.length) {
+      return { ok: false, message: "Add at least one skill you can teach." };
+    }
+
+    if (!normalizedWantedSkills.length) {
+      return { ok: false, message: "Add at least one skill you want to learn." };
+    }
+
+    setUsers((currentUsers) =>
+      currentUsers.map((user) =>
+        user.id === currentUser.id
+          ? {
+              ...user,
+              name: trimmedName,
+              city: trimmedCity,
+              skillsOffered: normalizedOfferedSkills,
+              skillsWanted: normalizedWantedSkills,
+            }
+          : user
+      )
+    );
+
+    return { ok: true, message: "Profile updated successfully." };
+  };
+
   const verifyTwoFactorCode = () => true;
 
   const logout = () => {
@@ -277,6 +320,7 @@ export function AppProvider({ children }) {
       pendingVerification: null,
       registerUser,
       loginUser,
+      updateProfile,
       verifyTwoFactorCode,
       logout,
     }),
