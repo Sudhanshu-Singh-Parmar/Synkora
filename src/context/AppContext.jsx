@@ -119,11 +119,11 @@ function writeStorage(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-function normalizeSkillList(skills) {
+function normalizeSkillList(skills = []) {
   const seen = new Set();
 
   return skills
-    .map((skill) => skill.trim())
+    .map((skill) => String(skill).trim())
     .filter(Boolean)
     .filter((skill) => {
       const key = skill.toLowerCase();
@@ -144,7 +144,6 @@ export function AppProvider({ children }) {
   });
   const [sessionUserId, setSessionUserId] = useState(() => readStorage(STORAGE_KEYS.session, null));
   const [authMode, setAuthMode] = useState("register");
-  const [pendingVerification, setPendingVerification] = useState(null);
   const [authError, setAuthError] = useState("");
 
   useEffect(() => {
@@ -161,16 +160,6 @@ export function AppProvider({ children }) {
   const isAuthenticated = Boolean(currentUser);
 
   const clearAuthError = () => setAuthError("");
-
-  const startVerification = (payload) => {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setPendingVerification({
-      ...payload,
-      code,
-      createdAt: Date.now(),
-    });
-    setAuthError("");
-  };
 
   const registerUser = ({ name, email, password, city, skillsOffered, skillsWanted }) => {
     const trimmedName = name.trim();
@@ -231,7 +220,9 @@ export function AppProvider({ children }) {
       skillsWanted: normalizedWantedSkills,
     };
 
-    startVerification({ type: "register", user: newUser, email: newUser.email });
+    setUsers((currentUsers) => [...currentUsers, newUser]);
+    setSessionUserId(newUser.id);
+    setAuthError("");
     return true;
   };
 
@@ -256,38 +247,15 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    startVerification({ type: "login", userId: existingUser.id, email: existingUser.email });
-    return true;
-  };
-
-  const verifyTwoFactorCode = (code) => {
-    if (!pendingVerification) {
-      setAuthError("No verification is pending right now.");
-      return false;
-    }
-
-    if (pendingVerification.code !== code) {
-      setAuthError("Verification code is incorrect.");
-      return false;
-    }
-
-    if (pendingVerification.type === "register") {
-      setUsers((currentUsers) => [...currentUsers, pendingVerification.user]);
-      setSessionUserId(pendingVerification.user.id);
-    }
-
-    if (pendingVerification.type === "login") {
-      setSessionUserId(pendingVerification.userId);
-    }
-
-    setPendingVerification(null);
+    setSessionUserId(existingUser.id);
     setAuthError("");
     return true;
   };
 
+  const verifyTwoFactorCode = () => true;
+
   const logout = () => {
     setSessionUserId(null);
-    setPendingVerification(null);
     setAuthMode("login");
     setAuthError("");
   };
@@ -306,13 +274,13 @@ export function AppProvider({ children }) {
       setAuthMode,
       authError,
       clearAuthError,
-      pendingVerification,
+      pendingVerification: null,
       registerUser,
       loginUser,
       verifyTwoFactorCode,
       logout,
     }),
-    [authError, authMode, currentUser, isAuthenticated, pendingVerification, profile, users, wallet]
+    [authError, authMode, currentUser, isAuthenticated, profile, users, wallet]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

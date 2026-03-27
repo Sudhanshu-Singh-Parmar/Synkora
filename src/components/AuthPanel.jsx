@@ -78,10 +78,8 @@ export default function AuthPanel() {
     setAuthMode,
     authError,
     clearAuthError,
-    pendingVerification,
     registerUser,
     loginUser,
-    verifyTwoFactorCode,
     isAuthenticated,
     currentUser,
     logout,
@@ -89,7 +87,6 @@ export default function AuthPanel() {
 
   const [registerForm, setRegisterForm] = useState(initialRegisterState);
   const [loginForm, setLoginForm] = useState(initialLoginState);
-  const [verificationCode, setVerificationCode] = useState("");
   const requestedMode = searchParams.get("auth");
   const panelTargetId = "auth-panel";
 
@@ -101,10 +98,6 @@ export default function AuthPanel() {
   }, [clearAuthError, requestedMode, setAuthMode]);
 
   useEffect(() => {
-    setVerificationCode("");
-  }, [pendingVerification]);
-
-  useEffect(() => {
     const panel = document.getElementById(panelTargetId);
 
     if (!panel) {
@@ -112,7 +105,7 @@ export default function AuthPanel() {
     }
 
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [authMode, pendingVerification]);
+  }, [authMode]);
 
   const updateRegisterField = (field, value) => {
     setRegisterForm((current) => ({ ...current, [field]: value }));
@@ -120,7 +113,7 @@ export default function AuthPanel() {
 
   const addRegisterSkill = (field, skill) => {
     setRegisterForm((current) => {
-      if (current[field].includes(skill)) {
+      if (current[field].some((item) => item.toLowerCase() === skill.toLowerCase())) {
         return current;
       }
 
@@ -144,28 +137,20 @@ export default function AuthPanel() {
     const registered = registerUser(registerForm);
 
     if (registered) {
-      setLoginForm({
-        email: registerForm.email.trim().toLowerCase(),
-        password: registerForm.password,
-      });
+      setRegisterForm(initialRegisterState);
+      setLoginForm(initialLoginState);
+      navigate("/discover", { replace: true });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleLoginSubmit = (event) => {
     event.preventDefault();
     clearAuthError();
-    loginUser(loginForm);
-  };
+    const loggedIn = loginUser(loginForm);
 
-  const handleVerificationSubmit = (event) => {
-    event.preventDefault();
-    clearAuthError();
-    const verified = verifyTwoFactorCode(verificationCode.trim());
-
-    if (verified) {
-      setRegisterForm(initialRegisterState);
+    if (loggedIn) {
       setLoginForm(initialLoginState);
-      setVerificationCode("");
       navigate("/discover", { replace: true });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -211,7 +196,6 @@ export default function AuthPanel() {
               setSearchParams({ auth: mode });
               setAuthMode(mode);
               clearAuthError();
-              setVerificationCode("");
             }}
             className={`flex-1 rounded-full px-4 py-3 text-sm font-medium capitalize transition ${
               authMode === mode ? "bg-white text-ink-950" : "text-slate-300 hover:text-white"
@@ -222,35 +206,7 @@ export default function AuthPanel() {
         ))}
       </div>
 
-      {pendingVerification ? (
-        <form className="mt-6 space-y-4" onSubmit={handleVerificationSubmit}>
-          <div>
-            <p className="text-sm uppercase tracking-[0.35em] text-gold-300">2-step verification</p>
-            <h3 className="mt-3 font-display text-3xl text-white">Verify your account</h3>
-            <p className="mt-2 text-sm text-slate-400">
-              Enter the 6-digit verification code shown below to complete sign in securely in this prototype.
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-gold-300/20 bg-gold-400/10 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-gold-200">Verification code</p>
-            <p className="mt-2 font-display text-4xl tracking-[0.35em] text-white">{pendingVerification.code}</p>
-            <p className="mt-2 text-sm text-slate-300">Sent to {pendingVerification.email}</p>
-          </div>
-          <input
-            value={verificationCode}
-            onChange={(event) => setVerificationCode(event.target.value)}
-            placeholder="Enter 6-digit code"
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-teal-300/40"
-          />
-          {authError ? <p className="text-sm text-rose-300">{authError}</p> : null}
-          <button
-            type="submit"
-            className="w-full rounded-full bg-teal-400 px-5 py-3 text-sm font-semibold text-ink-950 transition hover:bg-teal-300"
-          >
-            Verify and continue
-          </button>
-        </form>
-      ) : authMode === "register" ? (
+      {authMode === "register" ? (
         <form className="mt-6 space-y-4" onSubmit={handleRegisterSubmit}>
           <div>
             <p className="text-sm uppercase tracking-[0.35em] text-teal-300">Create account</p>
@@ -309,7 +265,7 @@ export default function AuthPanel() {
             type="submit"
             className="w-full rounded-full bg-white px-5 py-3 text-sm font-semibold text-ink-950 transition hover:scale-[1.01]"
           >
-            Register and send code
+            Create account
           </button>
         </form>
       ) : (
@@ -339,7 +295,7 @@ export default function AuthPanel() {
             type="submit"
             className="w-full rounded-full bg-teal-400 px-5 py-3 text-sm font-semibold text-ink-950 transition hover:bg-teal-300"
           >
-            Login and verify
+            Login
           </button>
         </form>
       )}
