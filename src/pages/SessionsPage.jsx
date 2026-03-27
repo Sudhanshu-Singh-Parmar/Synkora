@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { createMatch, formatSkillList, sortMatches } from "../utils/matching";
 
 const STORAGE_KEYS = {
   meetings: "swapmantra_meetings",
@@ -20,45 +21,6 @@ function readStorage(key, fallback) {
   }
 }
 
-function normalizeSkill(skill) {
-  return skill.trim().toLowerCase();
-}
-
-function normalizeCity(city) {
-  return city.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function getSharedSkills(sourceSkills, targetSkills) {
-  const targetSet = new Set(targetSkills.map(normalizeSkill));
-  return sourceSkills.filter((skill) => targetSet.has(normalizeSkill(skill)));
-}
-
-function createMatch(user, candidate, index) {
-  const candidateCanTeach = getSharedSkills(user.skillsWanted, candidate.skillsOffered);
-  const userCanTeach = getSharedSkills(candidate.skillsWanted, user.skillsOffered);
-  const sameCity = Boolean(user.city && candidate.city && normalizeCity(user.city) === normalizeCity(candidate.city));
-  const localBonus = sameCity ? 4 : 0;
-  const score = candidateCanTeach.length * 3 + userCanTeach.length * 3 + localBonus;
-
-  if (!candidateCanTeach.length || !userCanTeach.length) {
-    return null;
-  }
-
-  return {
-    id: `${user.id}-${candidate.id}`,
-    candidate,
-    score,
-    sameCity,
-    candidateCanTeach,
-    userCanTeach,
-    compatibility: Math.min(98, 70 + score * 4),
-  };
-}
-
-function formatSkillList(skills) {
-  return skills.join(", ");
-}
-
 export default function SessionsPage() {
   const { currentUser, isAuthenticated, users } = useAppContext();
   const meetings = readStorage(STORAGE_KEYS.meetings, []);
@@ -69,20 +31,12 @@ export default function SessionsPage() {
       return [];
     }
 
-    const matches = users
-      .filter((candidate) => candidate.id !== currentUser.id)
-      .map((candidate, index) => createMatch(currentUser, candidate, index))
-      .filter(Boolean)
-      .sort((left, right) => {
-        if (left.sameCity !== right.sameCity) {
-          return Number(right.sameCity) - Number(left.sameCity);
-        }
-
-        return right.score - left.score;
-      });
-
-    const localMatches = matches.filter((match) => match.sameCity);
-    return localMatches.length ? localMatches : matches;
+    return sortMatches(
+      users
+        .filter((candidate) => candidate.id !== currentUser.id)
+        .map((candidate, index) => createMatch(currentUser, candidate, index))
+        .filter(Boolean)
+    );
   }, [currentUser, isAuthenticated, users]);
 
   const userMeetings = useMemo(() => {
@@ -124,8 +78,8 @@ export default function SessionsPage() {
           <p className="text-sm uppercase tracking-[0.35em] text-gold-300">Sessions</p>
           <h1 className="mt-4 font-display text-4xl text-white">Your sessions appear after you log in and get matched</h1>
           <p className="mt-4 text-lg leading-8 text-slate-300">
-            Login first, find a reciprocal skill swap, and then this page will show booked sessions, pending matches,
-            and active chat threads.
+            Login first, find a high-probability skill match, and then this page will show booked sessions, pending
+            matches, and active chat threads.
           </p>
           <Link
             to="/auth?auth=login"
@@ -143,10 +97,10 @@ export default function SessionsPage() {
       <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="max-w-3xl">
           <p className="text-sm uppercase tracking-[0.35em] text-gold-300">Sessions</p>
-          <h1 className="mt-4 font-display text-4xl text-white">No sessions yet because no reciprocal match is available</h1>
+          <h1 className="mt-4 font-display text-4xl text-white">No sessions yet because no relevant match is available</h1>
           <p className="mt-4 text-lg leading-8 text-slate-300">
-            Sessions only unlock when someone can teach what you want to learn and also wants a skill you can teach in
-            return.
+            Sessions unlock once the engine finds a relevant user. Exact reciprocal matches rank highest, but strong
+            partial matches can also appear here.
           </p>
           <Link
             to="/discover"
@@ -165,7 +119,7 @@ export default function SessionsPage() {
         <p className="text-sm uppercase tracking-[0.35em] text-gold-300">Sessions</p>
         <h1 className="mt-4 font-display text-4xl text-white">Your sessions and match follow-ups</h1>
         <p className="mt-4 text-lg leading-8 text-slate-300">
-          This route now shows session activity only for users who have real reciprocal matches.
+          This route now shows session activity for users who have relevant ranked matches, with exact reciprocal pairs at the top.
         </p>
       </div>
 
@@ -202,8 +156,9 @@ export default function SessionsPage() {
               pendingMatches.map((match) => (
                 <div key={match.id} className="rounded-2xl border border-white/10 bg-ink-900/70 p-4 text-slate-300">
                   <p className="font-medium text-white">{match.candidate.name}</p>
-                  <p className="mt-2 text-sm">Learn: {formatSkillList(match.candidateCanTeach)}</p>
-                  <p className="mt-1 text-sm">Teach: {formatSkillList(match.userCanTeach)}</p>
+                  <p className="mt-2 text-sm">Match probability: {match.compatibility}%</p>
+                  <p className="mt-1 text-sm">Learn: {match.candidateCanTeach.length ? formatSkillList(match.candidateCanTeach) : "No exact wanted-skill overlap yet"}</p>
+                  <p className="mt-1 text-sm">Teach: {match.userCanTeach.length ? formatSkillList(match.userCanTeach) : "No current teach-back overlap"}</p>
                   <p className="mt-1 text-sm">{match.sameCity ? `${match.candidate.city} local match` : "Remote-compatible match"}</p>
                 </div>
               ))

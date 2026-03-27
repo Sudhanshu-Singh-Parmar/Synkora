@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import SectionHeading from "../components/SectionHeading";
 import { useAppContext } from "../context/AppContext";
+import { createMatch, formatSkillList, sortMatches } from "../utils/matching";
 
 const STORAGE_KEYS = {
   meetings: "swapmantra_meetings",
@@ -34,55 +35,6 @@ function writeStorage(key, value) {
   }
 
   window.localStorage.setItem(key, JSON.stringify(value));
-}
-
-function normalizeSkill(skill) {
-  return skill.trim().toLowerCase();
-}
-
-function normalizeCity(city) {
-  return city.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function formatSkillList(skills) {
-  return skills.join(", ");
-}
-
-function getSharedSkills(sourceSkills, targetSkills) {
-  const targetSet = new Set(targetSkills.map(normalizeSkill));
-  return sourceSkills.filter((skill) => targetSet.has(normalizeSkill(skill)));
-}
-
-function getDistanceLabel(currentCity, otherCity, index) {
-  if (currentCity && otherCity && normalizeCity(currentCity) === normalizeCity(otherCity)) {
-    return `${1.2 + index * 0.7} km`;
-  }
-
-  return `${6 + index * 1.5} km`;
-}
-
-function createMatch(user, candidate, index) {
-  const candidateCanTeach = getSharedSkills(user.skillsWanted, candidate.skillsOffered);
-  const userCanTeach = getSharedSkills(candidate.skillsWanted, user.skillsOffered);
-  const sameCity = Boolean(user.city && candidate.city && normalizeCity(user.city) === normalizeCity(candidate.city));
-  const localBonus = sameCity ? 4 : 0;
-  const score = candidateCanTeach.length * 3 + userCanTeach.length * 3 + localBonus;
-
-  if (!candidateCanTeach.length || !userCanTeach.length) {
-    return null;
-  }
-
-  return {
-    id: `${user.id}-${candidate.id}`,
-    candidate,
-    score,
-    sameCity,
-    candidateCanTeach,
-    userCanTeach,
-    distance: getDistanceLabel(user.city, candidate.city, index),
-    connectionModes: sameCity ? ["Offline", "Online", "Text"] : ["Online", "Text"],
-    compatibility: Math.min(98, 70 + score * 4),
-  };
 }
 
 function MessageBubble({ message, isOwnMessage }) {
@@ -118,20 +70,12 @@ export default function DiscoverPage() {
       return [];
     }
 
-    const matches = users
-      .filter((candidate) => candidate.id !== currentUser.id)
-      .map((candidate, index) => createMatch(currentUser, candidate, index))
-      .filter(Boolean)
-      .sort((left, right) => {
-        if (left.sameCity !== right.sameCity) {
-          return Number(right.sameCity) - Number(left.sameCity);
-        }
-
-        return right.score - left.score;
-      });
-
-    const localMatches = matches.filter((match) => match.sameCity);
-    return localMatches.length ? localMatches : matches;
+    return sortMatches(
+      users
+        .filter((candidate) => candidate.id !== currentUser.id)
+        .map((candidate, index) => createMatch(currentUser, candidate, index))
+        .filter(Boolean)
+    );
   }, [currentUser, isAuthenticated, users]);
 
   useEffect(() => {
@@ -196,7 +140,7 @@ export default function DiscoverPage() {
           : meetingForm.mode === "Text"
             ? "Synkora Chat"
             : "Community Hub"),
-      focus: `${selectedMatch.candidateCanTeach[0]} for ${selectedMatch.userCanTeach[0]}`,
+      focus: `${selectedMatch.candidateCanTeach[0] || "Skill exchange"}${selectedMatch.userCanTeach[0] ? ` for ${selectedMatch.userCanTeach[0]}` : ""}` ,
       status: "Scheduled",
     };
 
@@ -227,7 +171,7 @@ export default function DiscoverPage() {
           {
             id: `msg-${Date.now() + 1}`,
             sender: selectedMatch.candidate.name,
-            text: `Perfect. See you at ${newMeeting.location}. I will prepare a quick plan for ${selectedMatch.candidateCanTeach[0]}, and you can guide me on ${selectedMatch.userCanTeach[0]}.`,
+            text: `Perfect. See you at ${newMeeting.location}. I will prepare a quick plan for ${selectedMatch.candidateCanTeach[0] || "this topic"}${selectedMatch.userCanTeach[0] ? `, and you can guide me on ${selectedMatch.userCanTeach[0]}` : ""}.`,
           },
         ],
       };
@@ -264,8 +208,10 @@ export default function DiscoverPage() {
 
   const quickMessages = selectedMatch
     ? [
-        `Can we focus on ${selectedMatch.candidateCanTeach[0]} first?`,
-        `I can help you with ${selectedMatch.userCanTeach[0]} in return.`,
+        `Can we focus on ${selectedMatch.candidateCanTeach[0] || "this skill"} first?`,
+        selectedMatch.userCanTeach[0]
+          ? `I can help you with ${selectedMatch.userCanTeach[0]} in return.`
+          : "I'd love to connect and explore whether our goals align further.",
         `Let's start on text and then move to ${selectedMatch.sameCity ? "offline" : "online"}.`,
         `Would evening work for our first session?`,
       ]
@@ -277,28 +223,28 @@ export default function DiscoverPage() {
         <SectionHeading
           eyebrow="Discover"
           title="The matching engine is ready once you log in"
-          description="This prototype finds reciprocal skill swaps where you learn one skill, teach another in return, and preferably connect with someone from the same city."
+          description="This prototype now ranks relevant users by matching probability. Exact reciprocal skill swaps score 100%, while partial or one-way overlaps still appear with lower probabilities."
         />
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_1fr]">
           <div className="rounded-[30px] border border-white/10 bg-white/5 p-8">
             <p className="text-sm uppercase tracking-[0.35em] text-teal-300">How it works</p>
             <h2 className="mt-4 font-display text-4xl text-white">Mutual skill swap matching</h2>
             <p className="mt-4 text-slate-300">
-              Example: User A offers Coding and wants Guitar. User B offers Guitar and wants Coding. The engine flags
-              that as a strong two-way match, prefers the same city, and unlocks offline, online, or text coordination.
+              Example: User A offers Coding and wants Guitar. User B offers Guitar and wants Coding. That becomes a 100%
+              match. If only one side fully matches, the engine still shows that user with a lower probability.
             </p>
             <div className="mt-6 grid gap-3 text-sm text-slate-300">
-              <div className="rounded-2xl border border-white/10 bg-ink-900/75 p-4">Checks both offered and wanted skills</div>
-              <div className="rounded-2xl border border-white/10 bg-ink-900/75 p-4">Prioritizes reciprocal matches in the same city</div>
-              <div className="rounded-2xl border border-white/10 bg-ink-900/75 p-4">Stores meetings and chats in local storage</div>
+              <div className="rounded-2xl border border-white/10 bg-ink-900/75 p-4">Scores both learning overlap and teaching overlap</div>
+              <div className="rounded-2xl border border-white/10 bg-ink-900/75 p-4">Gives exact reciprocal matches a full 100%</div>
+              <div className="rounded-2xl border border-white/10 bg-ink-900/75 p-4">Still surfaces partial matches with lower probability</div>
             </div>
           </div>
           <div className="rounded-[30px] border border-teal-300/20 bg-teal-400/10 p-8">
             <p className="text-sm uppercase tracking-[0.35em] text-teal-200">Next step</p>
             <h2 className="mt-4 font-display text-4xl text-white">Login to test the prototype</h2>
             <p className="mt-4 text-slate-200">
-              Use the demo account `aarav@knit.local` with password `pass1234` and you will immediately see a reciprocal
-              guitar-coding match.
+              Use the demo account `aarav@knit.local` with password `pass1234` and you will immediately see high-probability
+              guitar-coding matches ranked at the top.
             </p>
             <Link
               to="/auth?auth=login"
@@ -317,7 +263,7 @@ export default function DiscoverPage() {
       <SectionHeading
         eyebrow="Discover"
         title="Find local people who teach what you need and want what you teach"
-        description="The page compares your learning goals with another member's expertise, confirms the reverse swap, prefers the same city, and lets you continue by offline meet, online session, or text."
+        description="The page compares your learning goals with another member's expertise, scores the reverse exchange, adds a city bonus, and ranks people by matching probability."
       />
 
       <div className="mt-10 grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
@@ -340,8 +286,8 @@ export default function DiscoverPage() {
           <div className="mt-6 rounded-[26px] border border-gold-300/20 bg-gold-400/10 p-4">
             <p className="text-xs uppercase tracking-[0.28em] text-gold-200">Matching logic</p>
             <p className="mt-3 text-sm leading-7 text-slate-200">
-              We show reciprocal swaps where both people get value. If you want to learn skill 1 and can teach skill 2,
-              we look for someone nearby who can teach skill 1 and wants skill 2 from you.
+              We now rank all relevant users by matching probability. Exact reciprocal swaps get 100%, strong two-way
+              overlaps rank next, and one-way but still useful matches appear lower in the list.
             </p>
           </div>
 
@@ -373,8 +319,8 @@ export default function DiscoverPage() {
                       </span>
                     </div>
                     <div className="mt-4 space-y-2 text-sm text-slate-300">
-                      <p>They teach: {formatSkillList(match.candidateCanTeach)}</p>
-                      <p>You teach: {formatSkillList(match.userCanTeach)}</p>
+                      <p>They teach: {match.candidateCanTeach.length ? formatSkillList(match.candidateCanTeach) : "No direct skill overlap yet"}</p>
+                      <p>You teach: {match.userCanTeach.length ? formatSkillList(match.userCanTeach) : "They do not currently need your offered skills"}</p>
                       <p>{match.sameCity ? `${match.candidate.city} local match` : `${match.distance} away`}</p>
                       <p>Connect via: {match.connectionModes.join(", ")}</p>
                     </div>
@@ -382,7 +328,7 @@ export default function DiscoverPage() {
                 ))
               ) : (
                 <div className="rounded-[26px] border border-white/10 bg-white/5 p-4 text-sm leading-7 text-slate-300">
-                  No reciprocal matches yet. Add another user in the same city with opposite teach and learn skills to test the engine.
+                  No relevant users yet. Add members with overlapping offered or wanted skills to test the probability-based engine.
                 </div>
               )}
             </div>
@@ -395,16 +341,19 @@ export default function DiscoverPage() {
               <section className="rounded-[30px] border border-white/10 bg-white/5 p-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <p className="text-sm uppercase tracking-[0.35em] text-teal-300">Reciprocal match found</p>
+                    <p className="text-sm uppercase tracking-[0.35em] text-teal-300">{selectedMatch.exactReciprocal ? "Exact reciprocal match" : selectedMatch.isReciprocal ? "Strong two-way match" : "Relevant suggested match"}</p>
                     <h2 className="mt-4 font-display text-4xl text-white">{selectedMatch.candidate.name}</h2>
                     <p className="mt-3 max-w-2xl text-slate-300">
-                      {selectedMatch.candidate.name} can teach you {formatSkillList(selectedMatch.candidateCanTeach)} and
-                      wants help with {formatSkillList(selectedMatch.userCanTeach)} from you.
+                      {selectedMatch.candidate.name} can teach you {selectedMatch.candidateCanTeach.length ? formatSkillList(selectedMatch.candidateCanTeach) : "skills close to your goals"} and
+                      {selectedMatch.userCanTeach.length ? ` wants help with ${formatSkillList(selectedMatch.userCanTeach)} from you.` : " may still be worth connecting with based on your learning goals."}
                     </p>
                     <p className="mt-3 text-sm text-slate-400">
                       {selectedMatch.sameCity
-                        ? `Same city match in ${selectedMatch.candidate.city}. You can meet offline, switch to online, or start with text.`
+                        ? `Same city match in ${selectedMatch.candidate.city}. You get a location bonus, so offline, online, or text all work.`
                         : `Different city match. Best options are online or text until you both decide otherwise.`}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Learn overlap: {selectedMatch.learnCoverage}% • Teach-back overlap: {selectedMatch.teachCoverage}%
                     </p>
                   </div>
                   <div className="rounded-[26px] border border-teal-300/20 bg-teal-400/10 px-5 py-4">
@@ -417,21 +366,21 @@ export default function DiscoverPage() {
                   <div className="rounded-[26px] border border-white/10 bg-ink-900/70 p-5">
                     <p className="text-xs uppercase tracking-[0.28em] text-slate-500">What they teach you</p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {selectedMatch.candidateCanTeach.map((skill) => (
+                      {selectedMatch.candidateCanTeach.length ? selectedMatch.candidateCanTeach.map((skill) => (
                         <span key={skill} className="rounded-full bg-teal-400/15 px-3 py-1.5 text-sm text-teal-100">
                           {skill}
                         </span>
-                      ))}
+                      )) : <p className="text-sm text-slate-400">No exact direct overlap on your wanted skills.</p>}
                     </div>
                   </div>
                   <div className="rounded-[26px] border border-white/10 bg-ink-900/70 p-5">
                     <p className="text-xs uppercase tracking-[0.28em] text-slate-500">What you teach them</p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {selectedMatch.userCanTeach.map((skill) => (
+                      {selectedMatch.userCanTeach.length ? selectedMatch.userCanTeach.map((skill) => (
                         <span key={skill} className="rounded-full bg-coral-400/15 px-3 py-1.5 text-sm text-coral-200">
                           {skill}
                         </span>
-                      ))}
+                      )) : <p className="text-sm text-slate-400">This is currently more useful for you than for them.</p>}
                     </div>
                   </div>
                 </div>
